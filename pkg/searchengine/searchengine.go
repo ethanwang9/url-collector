@@ -5,7 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"github.com/sirupsen/logrus"
+	"io"
 	"log"
 	"net/url"
 	"regexp"
@@ -34,7 +35,7 @@ func newSearchEngine(config SearchEngineConfig) *SearchEngine {
 }
 
 // NewBing Bing搜索
-func NewBing(conf BaseConfig) *SearchEngine {
+func NewBing() *SearchEngine {
 	return newSearchEngine(SearchEngineConfig{
 		baseURL:    config.CurrentConf.GetBaseURL(),
 		nextPageRe: regexp.MustCompile(`<a[^>]+href="(/search\?q=[^>]+)"[^>]+>`),
@@ -42,7 +43,7 @@ func NewBing(conf BaseConfig) *SearchEngine {
 	})
 }
 
-// NewGoogle Goolge 镜像搜索
+// NewGoogleImage Google 镜像搜索
 func NewGoogleImage(conf BaseConfig) *SearchEngine {
 	return newSearchEngine(SearchEngineConfig{
 		BaseConfig: conf,
@@ -96,7 +97,7 @@ func (s *SearchEngine) save() {
 			if filter.URLFilter.IsInBlackList(r) {
 				continue
 			}
-			fmt.Fprintln(s.ResultWriter, fmt.Sprintf("%s,\t%s", data.Keyword, data.Url))
+			_, _ = fmt.Fprintln(s.ResultWriter, fmt.Sprintf("%s,\t%s", data.Keyword, data.Url))
 		}
 		s.saverWg.Done()
 	}()
@@ -137,16 +138,21 @@ func (s *SearchEngine) fetch() {
 					//1.发送请求
 					resp, err := request.Get(dork, headers)
 					if err != nil {
-						log.Printf("requests.Get(%s) failed,err:%v", dork, err)
+						logrus.Printf("requests.Get(%s) failed,err:%v", dork, err)
 						continue
 					}
 					if resp.StatusCode > 300 && resp.StatusCode < 400 {
 						s.dorkCh <- resp.Header.Get("Location")
 					}
-					defer resp.Body.Close()
-					bytes, err := ioutil.ReadAll(resp.Body)
+					defer func(Body io.ReadCloser) {
+						err := Body.Close()
+						if err != nil {
+							logrus.Printf("Body.Close() failed,err:%v", err)
+						}
+					}(resp.Body)
+					bytes, err := io.ReadAll(resp.Body)
 					if err != nil {
-						log.Printf("ioutil.ReadAll failed,err:%v", err)
+						log.Printf("io.ReadAll failed,err:%v", err)
 						continue
 					}
 					text := string(bytes)
@@ -228,8 +234,8 @@ func (s *SearchEngine) Search() {
 	scanner := bufio.NewScanner(s.DorkReader)
 	for scanner.Scan() {
 		keyword := strings.TrimSpace(scanner.Text())
-		request := strings.ReplaceAll(s.baseURL, "$keyword", keyword)
-		s.dorkCh <- request
+		req := strings.ReplaceAll(s.baseURL, "$keyword", keyword)
+		s.dorkCh <- req
 		s.dorkWg.Add(1)
 		s.progress.AddTotal()
 	}

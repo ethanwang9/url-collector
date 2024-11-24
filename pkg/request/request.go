@@ -35,7 +35,7 @@ func Init() error {
 	return nil
 }
 
-//Get 发送get请求
+// Get 发送get请求
 func Get(url string, headers map[string]string) (*http.Response, error) {
 	request, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -52,7 +52,7 @@ func Get(url string, headers map[string]string) (*http.Response, error) {
 	return client.Do(request)
 }
 
-//Post 发送Post请求
+// Post 发送Post请求
 func Post(target string, data, headers map[string]string) (*http.Response, error) {
 	params := make(url.Values)
 	for k, v := range data {
@@ -69,9 +69,10 @@ func Post(target string, data, headers map[string]string) (*http.Response, error
 	return client.Do(request)
 }
 
-//genIP 产生随机的IP地址
+// genIP 产生随机的IP地址
 func genIP() string {
-	rand.Seed(time.Now().Unix())
-	ip := fmt.Sprintf("%d.%d.%d.%d", rand.Intn(255), rand.Intn(255), rand.Intn(255), rand.Intn(255))
+	s := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(s)
+	ip := fmt.Sprintf("%d.%d.%d.%d", r.Intn(255), r.Intn(255), r.Intn(255), r.Intn(255))
 	return ip
 }

@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"url-collector/config"
@@ -13,7 +12,7 @@ import (
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
-	cli "github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2"
 )
 
 var configFile string
@@ -93,7 +92,7 @@ func main() {
 func run(c *cli.Context) (err error) {
 	//1.初始化配置
 	if err := config.Init(configFile); err != nil {
-		log.Println("config.Init failed,err:", err)
+		logrus.Println("config.Init failed,err:", err)
 		return err
 	}
 	//2.初始化请求器
@@ -109,13 +108,13 @@ func run(c *cli.Context) (err error) {
 	//3.抽象出一个Reader
 	reader, err := config.CurrentConf.GetReader()
 	if err != nil {
-		cli.ShowAppHelp(c)
+		_ = cli.ShowAppHelp(c)
 		return err
 	}
 	//4.抽象出一个Writer
 	writer, err := config.CurrentConf.GetWriter()
 	if err != nil {
-		cli.ShowAppHelp(c)
+		_ = cli.ShowAppHelp(c)
 		return err
 	}
 	//3.创建搜索引擎对象
@@ -132,7 +131,7 @@ func run(c *cli.Context) (err error) {
 	case "google":
 		engine = searchengine.NewGoogle(baseConf)
 	case "bing":
-		engine = searchengine.NewBing(baseConf)
+		engine = searchengine.NewBing()
 	case "baidu":
 		engine = searchengine.NewBaidu(baseConf)
 	default:

@@ -1,7 +1,7 @@
 package config
 
-//DefaultConf 默认配置
-var DefaultConf AppConfig = AppConfig{
+// DefaultConf 默认配置
+var DefaultConf = AppConfig{
 	RoutineCount: 5,
 	SearchEngine: "google-image",
 	Format:       "url",

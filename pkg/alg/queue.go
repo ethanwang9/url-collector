@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-//Queue 队列
+// Queue 队列
 type Queue struct {
 	ch        chan string
 	size      int64
@@ -15,15 +15,7 @@ type Queue struct {
 	totalLock *sync.Mutex
 }
 
-//NewQueue 构造函数
-func NewQueue(bufSize int) (q *Queue) {
-	ch := make(chan string, bufSize)
-	return &Queue{
-		ch:        ch,
-		sizeLock:  new(sync.Mutex),
-		totalLock: new(sync.Mutex),
-	}
-}
+// NewQueue 构造函数
 func (q *Queue) addSize() {
 	q.sizeLock.Lock()
 	q.size++
@@ -41,7 +33,7 @@ func (q *Queue) addTotal() {
 	q.totalLock.Unlock()
 }
 
-//EnQueue 入队
+// EnQueue 入队
 func (q *Queue) EnQueue(item string) {
 	q.ch <- item
 	q.addSize()
@@ -49,7 +41,7 @@ func (q *Queue) EnQueue(item string) {
 	q.ShowProgress("入队")
 }
 
-//DeQueue 出队
+// DeQueue 出队
 func (q *Queue) DeQueue() (string, bool) {
 	item, ok := <-q.ch
 	if !ok {
@@ -59,17 +51,17 @@ func (q *Queue) DeQueue() (string, bool) {
 	return item, ok
 }
 
-//Close 关闭队列
+// Close 关闭队列
 func (q *Queue) Close() {
 	close(q.ch)
 }
 
-//GetSize 获取当前队列的元素个数
+// GetSize 获取当前队列的元素个数
 func (q *Queue) GetSize() (size int64) {
 	return q.size
 }
 
-//ShowProgress 显示进度
+// ShowProgress 显示进度
 func (q *Queue) ShowProgress(comment string) {
-	fmt.Fprintf(os.Stdout, "\r%s total:%d current:%d ", comment, q.total, q.size)
+	_, _ = fmt.Fprintf(os.Stdout, "\r%s total:%d current:%d ", comment, q.total, q.size)
 }
