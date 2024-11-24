@@ -11,10 +11,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-//CurrentConf 当前配置
+// CurrentConf 当前配置
 var CurrentConf AppConfig
 
-//AppConfig App配置
+// AppConfig App配置
 type AppConfig struct {
 	RoutineCount   int               `mapstructure:"routine_count"`
 	BlackList      []string          `mapstructure:"black_list"`
@@ -27,7 +27,7 @@ type AppConfig struct {
 	Proxy          string            `mapstructure:"proxy"`
 }
 
-//Init 初始化配置
+// Init 初始化配置
 func Init(filePath string) error {
 	CurrentConf.BaseURL = DefaultConf.BaseURL
 	CurrentConf.BlackList = DefaultConf.BlackList
@@ -49,12 +49,12 @@ func Init(filePath string) error {
 	return nil
 }
 
-//GetBaseURL 获取搜索引擎对应的baseURL
+// GetBaseURL 获取搜索引擎对应的baseURL
 func (a *AppConfig) GetBaseURL() string {
 	return a.BaseURL[a.SearchEngine]
 }
 
-//GetReader 将输入的文件或者关键字抽象为一个Reader
+// GetReader 将输入的文件或者关键字抽象为一个Reader
 func (a *AppConfig) GetReader() (io.Reader, error) {
 	if 0 != len(a.InputFilePath) {
 		reader, err := os.Open(a.InputFilePath)
@@ -71,7 +71,7 @@ func (a *AppConfig) GetReader() (io.Reader, error) {
 	return nil, errors.New("specify -f or -k please")
 }
 
-//GetWriter 将输出抽象为一个Writer
+// GetWriter 将输出抽象为一个Writer
 func (a *AppConfig) GetWriter() (io.Writer, error) {
 	if 0 != len(a.OutputFilePath) {
 		dstFile, err := os.OpenFile(a.OutputFilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)

@@ -3,6 +3,7 @@ package searchengine
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -32,7 +33,7 @@ func newSearchEngine(config SearchEngineConfig) *SearchEngine {
 	}
 }
 
-//NewBing Bing搜索
+// NewBing Bing搜索
 func NewBing(conf BaseConfig) *SearchEngine {
 	return newSearchEngine(SearchEngineConfig{
 		baseURL:    config.CurrentConf.GetBaseURL(),
@@ -41,7 +42,7 @@ func NewBing(conf BaseConfig) *SearchEngine {
 	})
 }
 
-//NewGoogle Goolge 镜像搜索
+// NewGoogle Goolge 镜像搜索
 func NewGoogleImage(conf BaseConfig) *SearchEngine {
 	return newSearchEngine(SearchEngineConfig{
 		BaseConfig: conf,
@@ -51,7 +52,7 @@ func NewGoogleImage(conf BaseConfig) *SearchEngine {
 	})
 }
 
-//NewBaidu Baidu 搜索
+// NewBaidu Baidu 搜索
 func NewBaidu(conf BaseConfig) *SearchEngine {
 	return newSearchEngine(SearchEngineConfig{
 		BaseConfig: conf,
@@ -61,7 +62,7 @@ func NewBaidu(conf BaseConfig) *SearchEngine {
 	})
 }
 
-//NewGoogle Google搜索
+// NewGoogle Google搜索
 func NewGoogle(conf BaseConfig) *SearchEngine {
 	return newSearchEngine(SearchEngineConfig{
 		BaseConfig: conf,
@@ -76,9 +77,13 @@ func (s *SearchEngine) save() {
 	s.saverWg.Add(1)
 	go func() {
 		for result := range s.resultCh {
+			// 解析结构体
+			var data SearchResultJson
+			_ = json.Unmarshal([]byte(result), &data)
+
 			time.Sleep(time.Millisecond * 100)
 			//0.格式化结果
-			r, err := s.formatResult(result)
+			r, err := s.formatResult(data.Url)
 			if err != nil {
 				log.Println("s.formatResult failed,err:", err)
 				continue
@@ -91,13 +96,13 @@ func (s *SearchEngine) save() {
 			if filter.URLFilter.IsInBlackList(r) {
 				continue
 			}
-			fmt.Fprintln(s.ResultWriter, r)
+			fmt.Fprintln(s.ResultWriter, fmt.Sprintf("%s,\t%s", data.Keyword, data.Url))
 		}
 		s.saverWg.Done()
 	}()
 }
 
-//根据配置项格式化采集结果
+// 根据配置项格式化采集结果
 func (s *SearchEngine) formatResult(rawurl string) (string, error) {
 	URL, err := url.Parse(rawurl)
 	if err != nil {
@@ -114,7 +119,7 @@ func (s *SearchEngine) formatResult(rawurl string) (string, error) {
 	return rawurl, nil
 }
 
-//采集url
+// 采集url
 func (s *SearchEngine) fetch() {
 	for i := 0; i < config.CurrentConf.RoutineCount; i++ {
 		s.fetcherWg.Add(1)
@@ -146,14 +151,6 @@ func (s *SearchEngine) fetch() {
 					}
 					text := string(bytes)
 					//2.解析响应 寻找指定文件的URL
-					if strings.Contains(text, "需要验证您是否来自浙江大学") {
-						if err := s.postAnswer(); err != nil {
-							log.Println("s.postAnswer failed,err:", err)
-							return
-						}
-						s.dorkCh <- dork
-						continue
-					}
 					if strings.Contains(text, "window.location.href") {
 						s.dorkCh <- dork
 						continue
@@ -166,12 +163,26 @@ func (s *SearchEngine) fetch() {
 					for _, match := range matches {
 						link := match[1]
 						//0.检查重定向
-						url, err := filter.URLFilter.CheckRedirect(link)
+						urlString, err := filter.URLFilter.CheckRedirect(link)
 						if err != nil {
 							log.Println("filter.URLFilter.CheckRedirect failed,,err:", err)
 							continue
 						}
-						s.resultCh <- url
+						// 获取keyword
+						queryCore, _ := url.Parse(dork)
+						var keyword string
+						if len(queryCore.Query().Get("wd")) == 0 {
+							keyword = queryCore.Query().Get("q")
+						} else {
+							keyword = queryCore.Query().Get("wd")
+						}
+						// 序列化存储
+						resultStruct := SearchResultJson{
+							Keyword: keyword,
+							Url:     urlString,
+						}
+						resultString, _ := json.Marshal(resultStruct)
+						s.resultCh <- string(resultString)
 					}
 					//3.寻找“下一页URL”
 					u, err := url.Parse(dork)
@@ -205,7 +216,7 @@ func (s *SearchEngine) fetch() {
 	}
 }
 
-//Search 开始搜索
+// Search 开始搜索
 func (s *SearchEngine) Search() {
 	//定时显示进度
 	s.progress.Show(s.ctx)
@@ -237,24 +248,4 @@ func (s *SearchEngine) wait() {
 	//等待saver结束工作
 	s.saverWg.Wait()
 	fmt.Println("\n搜索完成")
-}
-
-//提交答案
-func (s *SearchEngine) postAnswer() error {
-	data := map[string]string{
-		"0": "心灵之约",
-		"1": "水朝夕",
-		"2": "csxy@123",
-	}
-	headers := map[string]string{
-		"User-Agent":   s.userAgent,
-		"Content-Type": "application/x-www-form-urlencoded",
-	}
-	u := "https://g.luciaz.me/ip_ban_verify_page"
-	_, err := request.Post(u, data, headers)
-	if err != nil {
-		log.Println("request.Post failed,err:", err)
-		return err
-	}
-	return nil
 }

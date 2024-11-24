@@ -10,7 +10,7 @@ import (
 	mapset "github.com/deckarep/golang-set"
 )
 
-//BaseConfig 基础配置
+// BaseConfig 基础配置
 type BaseConfig struct {
 	FetchCount   int
 	Format       string
@@ -18,7 +18,7 @@ type BaseConfig struct {
 	ResultWriter io.Writer
 }
 
-//SearchEngineConfig 搜索引擎配置
+// SearchEngineConfig 搜索引擎配置
 type SearchEngineConfig struct {
 	BaseConfig
 	baseURL    string
@@ -26,7 +26,7 @@ type SearchEngineConfig struct {
 	nextPageRe *regexp.Regexp
 }
 
-//SearchEngine 搜索引擎
+// SearchEngine 搜索引擎
 type SearchEngine struct {
 	SearchEngineConfig
 	atagRe          *regexp.Regexp
@@ -39,4 +39,10 @@ type SearchEngine struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
 	FinishedDorkSet mapset.Set
+}
+
+// SearchResultJson 搜索返回信息结构体
+type SearchResultJson struct {
+	Keyword string
+	Url     string
 }
